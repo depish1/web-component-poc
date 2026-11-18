@@ -1,12 +1,12 @@
 import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Documents } from './documents/documents.component';
+import { DocumentMetadata, RepositoryType } from './documents/documents.types';
+import { TestWrapper } from './components/test-wrapper/test-wrapper.component';
 
 @Component({
-  imports: [RouterOutlet],
+  imports: [TestWrapper],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
 })
-export class App {
-  protected readonly title = signal('web-component-poc');
-}
+export class App {}
