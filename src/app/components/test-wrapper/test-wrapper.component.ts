@@ -54,8 +54,8 @@ export class TestWrapper {
     console.log('Dodano dokument:', document);
   }
 
-  handleDocumentRemove(id: string): void {
-    console.log('Usunięto dokument:', id);
+  handleDocumentRemove(document: DocumentMetadata): void {
+    console.log('Usunięto dokument:', document);
   }
 
   setRepository(event: Event): void {

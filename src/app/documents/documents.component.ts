@@ -19,7 +19,7 @@ export class Documents {
 
   readonly documentsChanged = output<DocumentMetadata[]>();
   readonly documentAdded = output<DocumentMetadata>();
-  readonly documentRemoved = output<string>();
+  readonly documentRemoved = output<DocumentMetadata>();
 
   protected readonly store = inject(DocumentsStore);
   private readonly repositoryFactory = inject(RepositoryFactory);
@@ -126,7 +126,7 @@ export class Documents {
       } else {
         document.markForDelete();
       }
-      this.documentRemoved.emit(document.metadata().id || '');
+      this.documentRemoved.emit(document.metadata());
       this.documentsChanged.emit(this.store.getData());
     } catch (error) {
       console.error(`Delete failed, localId: ${document.localId} ; ${error}`);
@@ -134,13 +134,13 @@ export class Documents {
   }
 
   async addFile(file: File): Promise<void> {
-    const localId = this.store.add(file);
-
+    const document = this.store.add(file);
+    this.documentAdded.emit(document.metadata());
     this.documentsChanged.emit(this.store.getData());
 
     if (this.synchronizationMode() === 'IMMEDIATE') {
       try {
-        await this.addDocumentRemotely(localId, this.activeRepository());
+        await this.addDocumentRemotely(document.localId, this.activeRepository());
       } catch (error) {
         console.error('Upload failed:', error);
       }
@@ -155,7 +155,9 @@ export class Documents {
     const results = await Promise.allSettled(
       pending.map((document) => {
         if (document.isToAdd()) return this.addDocumentRemotely(document.localId, repository);
-        else return this.deleteDocumentRemotely(document.localId, repository);
+        else if (document.isToDelete()) return this.deleteDocumentRemotely(document.localId, repository);
+
+        throw new Error(`Cannot synchronize document ${document.localId} in state ${document.state()}`);
       }),
     );
 
@@ -179,7 +181,6 @@ export class Documents {
     try {
       const metadata = await repository.upload(file);
       document.completeAdding(metadata);
-      this.documentAdded.emit(metadata);
     } catch (error) {
       document.failAdding();
       throw error;

@@ -9,7 +9,7 @@ export class DocumentsStore {
 
   readonly data = computed(() =>
     this.documents()
-      .filter((document) => !document.isToDelete())
+      .filter((document) => document.isActive())
       .map((document) => ({ ...document.metadata() })),
   );
 
@@ -20,7 +20,7 @@ export class DocumentsStore {
   }
 
   getAllDocuments(): DocumentMetadata[] {
-    return this.data();
+    return this.allDocuments();
   }
 
   setData(docs: DocumentMetadata[]): void {
@@ -31,7 +31,7 @@ export class DocumentsStore {
     return this.documents().find((document) => document.localId === localId);
   }
 
-  add(file: File): string {
+  add(file: File): DocumentModel {
     const now = new Date().toISOString();
     const metadata: DocumentMetadata = {
       fileName: file.name,
@@ -44,7 +44,7 @@ export class DocumentsStore {
     const newDocument = new DocumentModel({ initialState: 'NEW', metadata, file });
     this._documents.update((current) => [...current, newDocument]);
 
-    return newDocument.localId;
+    return newDocument;
   }
 
   remove(localId: string) {
