@@ -13,7 +13,13 @@ export class DocumentsStore {
       .map((document) => ({ ...document.metadata() })),
   );
 
+  readonly allDocuments = computed(() => this.documents().map((document) => ({ ...document.metadata() })));
+
   getData(): DocumentMetadata[] {
+    return this.data();
+  }
+
+  getAllDocuments(): DocumentMetadata[] {
     return this.data();
   }
 

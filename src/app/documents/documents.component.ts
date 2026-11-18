@@ -49,6 +49,10 @@ export class Documents {
     return this.store.getData();
   }
 
+  getDocuments(): DocumentMetadata[] {
+    return this.store.getAllDocuments();
+  }
+
   async downloadDocument(localId: string): Promise<void> {
     const document = this.store.getDocumentByLocalId(localId);
     if (!document) return;
@@ -109,17 +113,13 @@ export class Documents {
   }
 
   async removeDocument(localId: string): Promise<void> {
-    console.log('8');
     const document = this.store.getDocumentByLocalId(localId);
     if (!document) return;
 
     try {
       if (document.isOnlyLocal()) {
         this.store.remove(document.localId);
-        return;
-      }
-
-      if (this.synchronizationMode() === 'IMMEDIATE') {
+      } else if (this.synchronizationMode() === 'IMMEDIATE') {
         if (document.state() === 'DEFAULT') {
           await this.deleteDocumentRemotely(localId, this.activeRepository());
         }
@@ -130,7 +130,6 @@ export class Documents {
       this.documentsChanged.emit(this.store.getData());
     } catch (error) {
       console.error(`Delete failed, localId: ${document.localId} ; ${error}`);
-    } finally {
     }
   }
 
@@ -152,7 +151,6 @@ export class Documents {
     const repository = this.activeRepository();
 
     const pending = this.store.documents().filter((document) => document.isPending());
-    console.log('pending', pending);
 
     const results = await Promise.allSettled(
       pending.map((document) => {
@@ -161,10 +159,7 @@ export class Documents {
       }),
     );
 
-    console.log('results', results);
-
     const failures = results.filter((result) => result.status === 'rejected');
-    console.log('failures', failures);
 
     if (failures.length > 0) {
       throw new AggregateError(
@@ -183,7 +178,7 @@ export class Documents {
 
     try {
       const metadata = await repository.upload(file);
-      document.completeAdding(metadata.id as string);
+      document.completeAdding(metadata);
       this.documentAdded.emit(metadata);
     } catch (error) {
       document.failAdding();
@@ -201,7 +196,6 @@ export class Documents {
     try {
       await repository.remove(metadata.id);
       this.store.remove(document.localId);
-      this.documentRemoved.emit(metadata.id);
     } catch (error) {
       document.failDeleting();
       throw error;
