@@ -65,6 +65,9 @@ export class DocumentModel {
   startDeleting(): void {
     this.transitionTo('DELETING', ['DEFAULT', 'MARKED_FOR_DELETE', 'DELETE_FAILED']);
   }
+  // startimmediateDeleting(): void {
+  //   this.transitionTo('DELETING', ['DEFAULT']);
+  // }
 
   failDeleting(): void {
     this.transitionTo('DELETE_FAILED', ['DELETING']);

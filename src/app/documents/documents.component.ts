@@ -49,8 +49,8 @@ export class Documents {
     return this.store.getData();
   }
 
-  getDocuments(): DocumentMetadata[] {
-    return this.store.getAllDocuments();
+  getAllData(): DocumentMetadata[] {
+    return this.store.getAllData();
   }
 
   async downloadDocument(localId: string): Promise<void> {
@@ -93,22 +93,11 @@ export class Documents {
     }
   }
 
-  async commit(): Promise<void> {
-    if (this.committing()) throw new Error('Commit already in progress');
-
-    this.committing.set(true);
-
-    try {
-      await this.synchronizePendingDocuments();
-    } finally {
-      this.committing.set(false);
-    }
-  }
-
   undoDelete(localId: string): void {
     const document = this.store.getDocumentByLocalId(localId);
     if (!document) return;
     document.undoDelete();
+    this.documentAdded.emit(document.metadata());
     this.documentsChanged.emit(this.store.getData());
   }
 
@@ -121,6 +110,7 @@ export class Documents {
         this.store.remove(document.localId);
       } else if (this.synchronizationMode() === 'IMMEDIATE') {
         if (document.state() === 'DEFAULT') {
+          document.markForDelete();
           await this.deleteDocumentRemotely(localId, this.activeRepository());
         }
       } else {
@@ -137,7 +127,6 @@ export class Documents {
 
   async addFile(file: File): Promise<void> {
     const document = this.store.add(file);
-    this.documentAdded.emit(document.metadata());
 
     try {
       this.synchronizationMode() === 'IMMEDIATE' && (await this.addDocumentRemotely(document.localId, this.activeRepository()));
@@ -147,6 +136,18 @@ export class Documents {
       const updatedDocument = this.store.getDocumentByLocalId(document.localId);
       !!updatedDocument && this.documentAdded.emit(updatedDocument.metadata());
       this.documentsChanged.emit(this.store.getData());
+    }
+  }
+
+  async commit(): Promise<void> {
+    if (this.committing()) throw new Error('Commit already in progress');
+
+    this.committing.set(true);
+
+    try {
+      await this.synchronizePendingDocuments();
+    } finally {
+      this.committing.set(false);
     }
   }
 
