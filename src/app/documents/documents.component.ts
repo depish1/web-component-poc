@@ -29,6 +29,8 @@ export class Documents {
   readonly searchQuery = signal('');
   readonly isCommiting = signal(false);
 
+  readonly isSynchronized = computed(() => this.store.documents().every((document) => document.state() === 'DEFAULT'));
+
   private readonly activeRepository = computed(() => this.repositoryFactory.get(this.repositoryType()));
 
   readonly filteredDocuments = computed(() => {
@@ -112,6 +114,8 @@ export class Documents {
       this.store.remove(document.localId);
     } else if (document.state() === 'DEFAULT') {
       document.markForDelete();
+    } else {
+      return;
     }
 
     this.documentRemoved.emit(document.metadata());
