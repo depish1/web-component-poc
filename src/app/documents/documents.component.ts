@@ -105,37 +105,35 @@ export class Documents {
     const document = this.store.getDocumentByLocalId(localId);
     if (!document) return;
 
+    if (document.isOnlyLocal()) {
+      this.store.remove(document.localId);
+    } else {
+      document.markForDelete();
+    }
+
+    this.documentRemoved.emit(document.metadata());
+    this.documentsChanged.emit(this.store.getData());
+
     try {
-      if (document.isOnlyLocal()) {
-        this.store.remove(document.localId);
-      } else if (this.synchronizationMode() === 'IMMEDIATE') {
-        if (document.state() === 'DEFAULT') {
-          document.markForDelete();
-          await this.deleteDocumentRemotely(localId, this.activeRepository());
-        }
-      } else {
-        document.markForDelete();
+      if (this.synchronizationMode() === 'IMMEDIATE' && document.state() === 'DEFAULT') {
+        await this.deleteDocumentRemotely(localId, this.activeRepository());
       }
     } catch (error) {
-      console.error(`Delete failed, localId: ${document.localId} ; ${error}`);
-    } finally {
-      const updatedDocument = this.store.getDocumentByLocalId(document.localId);
-      !!updatedDocument && this.documentRemoved.emit(updatedDocument.metadata());
-      this.documentsChanged.emit(this.store.getData());
+      console.error(`Delete failed, localId: ${document.localId}, ${error}`);
     }
   }
 
   async addFile(file: File): Promise<void> {
     const document = this.store.add(file);
 
+    this.documentAdded.emit(document.metadata()); // Przy lokalnym dodaniu dokument nie ma jeszcze ID z repozytorium,
+    this.documentsChanged.emit(this.store.getData());
     try {
-      this.synchronizationMode() === 'IMMEDIATE' && (await this.addDocumentRemotely(document.localId, this.activeRepository()));
+      if (this.synchronizationMode() === 'IMMEDIATE') {
+        await this.addDocumentRemotely(document.localId, this.activeRepository());
+      }
     } catch (error) {
       console.error('Upload failed:', error);
-    } finally {
-      const updatedDocument = this.store.getDocumentByLocalId(document.localId);
-      !!updatedDocument && this.documentAdded.emit(updatedDocument.metadata());
-      this.documentsChanged.emit(this.store.getData());
     }
   }
 
