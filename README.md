@@ -89,3 +89,16 @@ Element udostępnia `setData()`, `getData()`, `commit()`, `isSynchronized()`,
 W obu przykładach spróbuj zapisać pustą listę, dodaj plik i spróbuj ponownie.
 Po zapisie zobaczysz metadane z ID zwróconym przez repozytorium. Możesz też
 oznaczyć jedyny plik do usunięcia i sprawdzić, czy formularz ponownie blokuje zapis.
+
+## Documents3 — Signal Forms
+
+Po uruchomieniu testowego API i `npm start` otwórz
+`http://localhost:4200/documents3`. Obie listy w przykładzie są odrębnymi
+polami tego samego formularza Signal Forms. Pierwsza wymaga co najmniej jednego
+aktywnego dokumentu.
+
+Przekaż wartość początkową w modelu formularza i podepnij kontrolkę przez
+`[formField]`. Zewnętrzna podmiana wartości pola tworzy nową listę dokumentów
+i odrzuca dotychczasowe operacje odroczone tej listy. Host powinien blokować
+podmianę podczas zapisu. Po `await commit()` i sprawdzeniu `isSynchronized()`
+odczytaj listę bezpośrednio z modelu formularza, razem z ID nadanymi przez API.
