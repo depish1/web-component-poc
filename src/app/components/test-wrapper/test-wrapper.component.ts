@@ -44,6 +44,7 @@ export class TestWrapper {
   async commit() {
     const x = await this.documents().commit();
     console.log('x', x);
+    console.log('this.documents().getData()', this.documents().getData());
   }
 
   handleDocumentsChange(documents: DocumentMetadata[]): void {

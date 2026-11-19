@@ -41,6 +41,7 @@ export class Documents {
   }
 
   setData(documents: DocumentMetadata[]): void {
+    if (this.isCommiting()) return;
     this.store.setData(documents);
     this.documentsChanged.emit(this.store.getData());
   }
@@ -94,6 +95,7 @@ export class Documents {
   }
 
   undoDelete(localId: string): void {
+    if (this.isCommiting()) return;
     const document = this.store.getDocumentByLocalId(localId);
     if (!document) return;
     document.undoDelete();
@@ -102,12 +104,13 @@ export class Documents {
   }
 
   async removeDocument(localId: string): Promise<void> {
+    if (this.isCommiting()) return;
     const document = this.store.getDocumentByLocalId(localId);
     if (!document) return;
 
     if (document.isOnlyLocal()) {
       this.store.remove(document.localId);
-    } else {
+    } else if (document.state() === 'DEFAULT') {
       document.markForDelete();
     }
 
@@ -124,6 +127,7 @@ export class Documents {
   }
 
   async addFile(file: File): Promise<void> {
+    if (this.isCommiting()) return;
     const document = this.store.add(file);
 
     this.documentAdded.emit(document.metadata()); // Przy lokalnym dodaniu dokument nie ma jeszcze ID z repozytorium,
