@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Documents2 — Web Component</title>
+    <script type="module" src="./main.js"></script>
+    <script type="module" src="./demo.js"></script>
+  </head>
+  <body>
+    <h1>Documents2 — HTML i JavaScript</h1>
+    <p id="startup" role="status">Ładowanie komponentu…</p>
+
+    <template id="documents-demo">
+      <form>
+        <baw-documents></baw-documents>
+        <button type="submit" disabled>Zapisz</button>
+        <button type="button" data-read disabled>Odczytaj listę</button>
+        <button type="button" data-replace disabled>Ustaw pustą listę</button>
+        <p data-error role="alert"></p>
+        <p data-event role="status"></p>
+        <pre data-output aria-live="polite"></pre>
+      </form>
+    </template>
+  </body>
+</html>

@@ -68,6 +68,30 @@
           "builder": "@angular/build:unit-test"
         }
       }
+    },
+    "documents-element": {
+      "projectType": "application",
+      "root": "web-component-demo",
+      "sourceRoot": "src",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "src/documents-element.ts",
+            "tsConfig": "tsconfig.element.json",
+            "outputPath": "dist/documents-element",
+            "index": false,
+            "outputHashing": "none",
+            "assets": [
+              {
+                "glob": "*.{html,js}",
+                "input": "web-component-demo",
+                "output": "/"
+              }
+            ]
+          }
+        }
+      }
     }
   }
 }

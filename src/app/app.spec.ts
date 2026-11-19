@@ -1,3 +1,6 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
+import { routes } from './app.routes';
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 
@@ -5,6 +8,7 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
+      providers: [provideRouter(routes), provideHttpClient()],
     })
       .compileComponents();
   });
@@ -15,10 +19,10 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', async () => {
+  it('should link to the Documents2 demo', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, web-component-poc');
+    expect(compiled.querySelector('a[href="/documents2"]')?.textContent).toContain('Documents2');
   });
 });

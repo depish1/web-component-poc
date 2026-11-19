@@ -57,3 +57,35 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Documents2
+
+Uruchom [docs-api-test](https://github.com/depish1/docs-api-test) na porcie 3000.
+Adapter repozytorium A używa `http://localhost:3000/api/files`. Oba przykłady
+uruchamiaj z originu `http://localhost:4200` albo dodaj wybrany origin do
+`CORS_ALLOWED_ORIGINS` serwera API.
+
+### Angular Reactive Forms
+
+Uruchom `npm ci`, potem `npm start` i otwórz
+`http://localhost:4200/documents2`. Formularz podpina `Documents2` przez
+`formControlName`. Regułę definiuje kontrolka, a komponent wyświetla przekazany
+stan walidacji. Strona główna nadal pokazuje oryginalny komponent.
+
+### Web Component w HTML i JavaScript
+
+Zatrzymaj serwer Angular, uruchom `npm run build:element`, potem
+`python -m http.server 4200 --directory dist/documents-element/browser`.
+Otwórz `http://localhost:4200/`. Źródła strony są w `web-component-demo/`.
+Do osadzenia w hoście użyj modułu `main.js` z tego buildu wraz z plikami JS
+wygenerowanymi obok niego.
+
+Po `customElements.whenDefined('baw-documents')` podłącz element do dokumentu
+i poczekaj na `element.init({ repository: 'A', synchronizationMode: 'DEFERRED' })`.
+Element udostępnia `setData()`, `getData()`, `commit()`, `isSynchronized()`,
+`isValid` i `setValid(isValid, errorMsg?)`. Zdarzenia `documentsChanged`,
+`documentAdded` i `documentRemoved` mają dane w `event.detail`.
+
+W obu przykładach spróbuj zapisać pustą listę, dodaj plik i spróbuj ponownie.
+Po zapisie zobaczysz metadane z ID zwróconym przez repozytorium. Możesz też
+oznaczyć jedyny plik do usunięcia i sprawdzić, czy formularz ponownie blokuje zapis.
