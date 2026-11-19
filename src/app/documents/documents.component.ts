@@ -27,7 +27,7 @@ export class Documents {
 
   readonly deletingIds = signal<ReadonlySet<string>>(new Set());
   readonly searchQuery = signal('');
-  readonly committing = signal(false);
+  readonly isCommiting = signal(false);
 
   private readonly activeRepository = computed(() => this.repositoryFactory.get(this.repositoryType()));
 
@@ -115,7 +115,7 @@ export class Documents {
     this.documentsChanged.emit(this.store.getData());
 
     try {
-      if (this.synchronizationMode() === 'IMMEDIATE' && document.state() === 'DEFAULT') {
+      if (this.synchronizationMode() === 'IMMEDIATE' && document.isToDelete()) {
         await this.deleteDocumentRemotely(localId, this.activeRepository());
       }
     } catch (error) {
@@ -138,14 +138,14 @@ export class Documents {
   }
 
   async commit(): Promise<void> {
-    if (this.committing()) throw new Error('Commit already in progress');
+    if (this.isCommiting()) throw new Error('Commit already in progress');
 
-    this.committing.set(true);
+    this.isCommiting.set(true);
 
     try {
       await this.synchronizePendingDocuments();
     } finally {
-      this.committing.set(false);
+      this.isCommiting.set(false);
     }
   }
 

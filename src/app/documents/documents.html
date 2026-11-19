@@ -3,7 +3,7 @@
   <nav class="documents__actions">
     <input type="search" placeholder="Szukaj po nazwie pliku..." [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" />
     <input #fileInput type="file" hidden (change)="uploadDocument($event)" />
-    <button type="button" (click)="fileInput.click()">Dodaj dokument</button>
+    <button type="button" (click)="fileInput.click()" [disabled]="isCommiting()">Dodaj dokument</button>
   </nav>
   <table class="documents-table">
     <colgroup>
