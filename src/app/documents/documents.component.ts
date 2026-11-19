@@ -126,24 +126,27 @@ export class Documents {
       } else {
         document.markForDelete();
       }
-      this.documentRemoved.emit(document.metadata());
-      this.documentsChanged.emit(this.store.getData());
     } catch (error) {
       console.error(`Delete failed, localId: ${document.localId} ; ${error}`);
+    } finally {
+      const updatedDocument = this.store.getDocumentByLocalId(document.localId);
+      !!updatedDocument && this.documentRemoved.emit(updatedDocument.metadata());
+      this.documentsChanged.emit(this.store.getData());
     }
   }
 
   async addFile(file: File): Promise<void> {
     const document = this.store.add(file);
     this.documentAdded.emit(document.metadata());
-    this.documentsChanged.emit(this.store.getData());
 
-    if (this.synchronizationMode() === 'IMMEDIATE') {
-      try {
-        await this.addDocumentRemotely(document.localId, this.activeRepository());
-      } catch (error) {
-        console.error('Upload failed:', error);
-      }
+    try {
+      this.synchronizationMode() === 'IMMEDIATE' && (await this.addDocumentRemotely(document.localId, this.activeRepository()));
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      const updatedDocument = this.store.getDocumentByLocalId(document.localId);
+      !!updatedDocument && this.documentAdded.emit(updatedDocument.metadata());
+      this.documentsChanged.emit(this.store.getData());
     }
   }
 
@@ -153,7 +156,7 @@ export class Documents {
     const pending = this.store.documents().filter((document) => document.isPending());
 
     const results = await Promise.allSettled(
-      pending.map((document) => {
+      pending.map(async (document) => {
         if (document.isToAdd()) return this.addDocumentRemotely(document.localId, repository);
         else if (document.isToDelete()) return this.deleteDocumentRemotely(document.localId, repository);
 
