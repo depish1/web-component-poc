@@ -71,7 +71,7 @@
     },
     "documents-element": {
       "projectType": "application",
-      "root": "web-component-demo",
+      "root": "",
       "sourceRoot": "src",
       "architect": {
         "build": {
@@ -79,16 +79,13 @@
           "options": {
             "browser": "src/documents-element.ts",
             "tsConfig": "tsconfig.element.json",
-            "outputPath": "dist/documents-element",
+            "outputPath": {
+              "base": "dist/documents-element",
+              "browser": ""
+            },
             "index": false,
-            "outputHashing": "none",
-            "assets": [
-              {
-                "glob": "*.{html,js}",
-                "input": "web-component-demo",
-                "output": "/"
-              }
-            ]
+            "extractLicenses": false,
+            "outputHashing": "none"
           }
         }
       }
