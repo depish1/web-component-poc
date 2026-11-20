@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, input, model, output, signal, untracked } from '@angular/core';
+import type { FormValueControl, ValidationError } from '@angular/forms/signals';
 import { DocumentMetadata, RepositoryType, SynchronizationMode, Repository } from './documents.types';
 import { RepositoryFactory } from './RepositoryFactory';
 import { FileDownloadService } from './services/file-download.service';
@@ -8,26 +9,31 @@ import { DocumentsStore } from './services/documents-store.service';
   imports: [],
   providers: [DocumentsStore, FileDownloadService],
   selector: 'app-documents',
+  host: { '(focusout)': 'handleFocusOut($event)' },
   styleUrl: './documents.css',
   templateUrl: './documents.html',
 })
-export class Documents {
-  readonly initialData = input<DocumentMetadata[]>([]);
+export class Documents implements FormValueControl<DocumentMetadata[]> {
+  readonly value = model<DocumentMetadata[]>([]);
+  readonly disabled = input(false);
+  readonly invalid = input(false);
+  readonly touched = input(false);
+  readonly errors = input<readonly ValidationError.WithOptionalFieldTree[]>([]);
+  readonly touch = output<void>();
   readonly repositoryType = input<RepositoryType>('A');
   readonly synchronizationMode = input<SynchronizationMode>('IMMEDIATE');
   readonly title = input<string>('');
-
-  readonly documentsChanged = output<DocumentMetadata[]>();
-  readonly documentAdded = output<DocumentMetadata>();
-  readonly documentRemoved = output<DocumentMetadata>();
 
   protected readonly store = inject(DocumentsStore);
   private readonly repositoryFactory = inject(RepositoryFactory);
   private readonly fileDownloadService = inject(FileDownloadService);
 
-  readonly deletingIds = signal<ReadonlySet<string>>(new Set());
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private appliedValue?: DocumentMetadata[];
+  private externalRevision = 0;
   readonly searchQuery = signal('');
-  readonly isCommiting = signal(false);
+  private readonly committing = signal(false);
+  protected readonly actionsDisabled = computed(() => this.disabled() || this.committing());
 
   readonly isSynchronized = computed(() => this.store.documents().every((document) => document.state() === 'DEFAULT'));
 
@@ -38,25 +44,37 @@ export class Documents {
     return this.store.documents().filter((document) => document.metadata().fileName.toLocaleLowerCase().includes(query));
   });
 
-  ngOnInit(): void {
-    this.store.setData(this.initialData());
+  constructor() {
+    effect(() => {
+      const value = this.value();
+      untracked(() => this.applyFormValue(value));
+    });
   }
 
-  setData(documents: DocumentMetadata[]): void {
-    if (this.isCommiting()) return;
-    this.store.setData(documents);
-    this.documentsChanged.emit(this.store.getData());
+  protected handleFocusOut(event: FocusEvent): void {
+    if (!this.disabled() && !this.host.nativeElement.contains(event.relatedTarget as Node | null)) {
+      this.touch.emit();
+    }
   }
 
-  getData(): DocumentMetadata[] {
-    return this.store.getData();
+  private applyFormValue(value = this.value()): void {
+    if (value === this.appliedValue) return;
+
+    this.externalRevision++;
+    this.appliedValue = value;
+    this.store.replace(value);
   }
 
-  getAllData(): DocumentMetadata[] {
-    return this.store.getAllData();
+  private publishValue(): void {
+    // Keep the store's Files and pending deletes when Signal Forms echoes this value.
+    const value = this.store.data();
+    this.appliedValue = value;
+    this.value.set(value);
   }
 
   async downloadDocument(localId: string): Promise<void> {
+    if (this.actionsDisabled()) return;
+    this.applyFormValue();
     const document = this.store.getDocumentByLocalId(localId);
     if (!document) return;
     const file = document.file();
@@ -97,16 +115,17 @@ export class Documents {
   }
 
   undoDelete(localId: string): void {
-    if (this.isCommiting()) return;
+    if (this.actionsDisabled()) return;
+    this.applyFormValue();
     const document = this.store.getDocumentByLocalId(localId);
-    if (!document) return;
+    if (!document?.isToDelete()) return;
     document.undoDelete();
-    this.documentAdded.emit(document.metadata());
-    this.documentsChanged.emit(this.store.getData());
+    this.publishValue();
   }
 
   async removeDocument(localId: string): Promise<void> {
-    if (this.isCommiting()) return;
+    if (this.actionsDisabled()) return;
+    this.applyFormValue();
     const document = this.store.getDocumentByLocalId(localId);
     if (!document) return;
 
@@ -118,8 +137,7 @@ export class Documents {
       return;
     }
 
-    this.documentRemoved.emit(document.metadata());
-    this.documentsChanged.emit(this.store.getData());
+    this.publishValue();
 
     try {
       if (this.synchronizationMode() === 'IMMEDIATE' && document.isToDelete()) {
@@ -131,11 +149,11 @@ export class Documents {
   }
 
   async addFile(file: File): Promise<void> {
-    if (this.isCommiting()) return;
+    if (this.actionsDisabled()) return;
+    this.applyFormValue();
     const document = this.store.add(file);
 
-    this.documentAdded.emit(document.metadata()); // Przy lokalnym dodaniu dokument nie ma jeszcze ID z repozytorium,
-    this.documentsChanged.emit(this.store.getData());
+    this.publishValue();
     try {
       if (this.synchronizationMode() === 'IMMEDIATE') {
         await this.addDocumentRemotely(document.localId, this.activeRepository());
@@ -146,14 +164,21 @@ export class Documents {
   }
 
   async commit(): Promise<void> {
-    if (this.isCommiting()) throw new Error('Commit already in progress');
+    if (this.committing()) throw new Error('Commit already in progress');
+    if (this.disabled()) throw new Error('The documents field is disabled.');
+    this.applyFormValue();
+    const revision = this.externalRevision;
 
-    this.isCommiting.set(true);
+    this.committing.set(true);
 
     try {
       await this.synchronizePendingDocuments();
+      this.applyFormValue();
+      if (revision !== this.externalRevision) {
+        throw new Error('The document list was replaced during synchronization.');
+      }
     } finally {
-      this.isCommiting.set(false);
+      this.committing.set(false);
     }
   }
 
@@ -190,7 +215,10 @@ export class Documents {
 
     try {
       const metadata = await repository.upload(file);
+      this.applyFormValue();
+      if (this.store.getDocumentByLocalId(localId) !== document) return;
       document.completeAdding(metadata);
+      this.publishValue();
     } catch (error) {
       document.failAdding();
       throw error;

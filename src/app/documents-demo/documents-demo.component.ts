@@ -1,25 +1,17 @@
 import { Component, signal, viewChildren } from '@angular/core';
 import { FormField, form, minLength } from '@angular/forms/signals';
-import { Documents3 } from '../documents3/documents3.component';
-import type { DocumentMetadata } from '../documents3/documents.types';
+import { Documents } from '../documents/documents.component';
+import type { DocumentMetadata } from '../documents/documents.types';
 
 @Component({
-  selector: 'app-documents3-demo',
-  imports: [Documents3, FormField],
+  selector: 'app-documents-demo',
+  imports: [Documents, FormField],
   template: `
-    <h1>Documents3 — Signal Forms</h1>
+    <h1>Documents — Signal Forms</h1>
 
     <form (submit)="save($event)">
-      <app-documents3
-        [formField]="documentsForm.requiredDocuments"
-        title="Dokumenty wymagane"
-        synchronizationMode="DEFERRED"
-      />
-      <app-documents3
-        [formField]="documentsForm.additionalDocuments"
-        title="Dokumenty dodatkowe"
-        synchronizationMode="DEFERRED"
-      />
+      <app-documents [formField]="documentsForm.requiredDocuments" title="Dokumenty wymagane" synchronizationMode="DEFERRED" />
+      <app-documents [formField]="documentsForm.additionalDocuments" title="Dokumenty dodatkowe" synchronizationMode="DEFERRED" />
       <button type="submit" [disabled]="saving()">Zapisz</button>
       <button type="button" [disabled]="saving()" (click)="replaceDocuments()">Wyczyść listę dodatkową</button>
     </form>
@@ -33,8 +25,8 @@ import type { DocumentMetadata } from '../documents3/documents.types';
     }
   `,
 })
-export class Documents3Demo {
-  private readonly controls = viewChildren(Documents3);
+export class DocumentsDemo {
+  private readonly controls = viewChildren(Documents);
   protected readonly saving = signal(false);
   protected readonly error = signal('');
   protected readonly result = signal('');
@@ -65,8 +57,7 @@ export class Documents3Demo {
     try {
       const controls = this.controls();
       const results = await Promise.allSettled(controls.map((control) => control.commit()));
-      if (results.some((result) => result.status === 'rejected') ||
-          controls.some((control) => !control.isSynchronized())) {
+      if (results.some((result) => result.status === 'rejected') || controls.some((control) => !control.isSynchronized())) {
         throw new Error('Nie udało się zsynchronizować wszystkich dokumentów.');
       }
 

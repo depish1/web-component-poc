@@ -17,12 +17,10 @@ export class DocumentModel {
   readonly metadata = signal<DocumentMetadata>({} as DocumentMetadata);
   readonly file = signal<File | undefined>(undefined);
 
-  readonly isFailed = computed(() => ['ADDING_FAILED', 'DELETE_FAILED'].includes(this.state()));
-  readonly isProcessing = computed(() => ['ADDING', 'DELETING'].includes(this.state()));
   readonly isToDelete = computed(() => ['MARKED_FOR_DELETE', 'DELETE_FAILED'].includes(this.state()));
   readonly isToAdd = computed(() => ['NEW', 'ADDING_FAILED'].includes(this.state()));
-  readonly isPending = computed(() => ['MARKED_FOR_DELETE', 'DELETE_FAILED', 'NEW', 'ADDING_FAILED'].includes(this.state()));
-  readonly isOnlyLocal = computed(() => ['NEW', 'ADDING_FAILED'].includes(this.state()));
+  readonly isPending = computed(() => this.isToAdd() || this.isToDelete());
+  readonly isOnlyLocal = this.isToAdd;
   readonly isActive = computed(() => ['NEW', 'ADDING', 'ADDING_FAILED', 'DEFAULT'].includes(this.state())); // czy jest nadal aktualny z perspektywy stanu formularza, traktując odroczone operacje jakby się wykonaly - jeśli ma być usunięty to tu już dokument nie jest uwzględniany, jeśli ma być dodany to już jest uznawany
 
   constructor({ initialState = 'NEW', metadata, file }: DocumentModelConfig) {
@@ -65,9 +63,6 @@ export class DocumentModel {
   startDeleting(): void {
     this.transitionTo('DELETING', ['DEFAULT', 'MARKED_FOR_DELETE', 'DELETE_FAILED']);
   }
-  // startimmediateDeleting(): void {
-  //   this.transitionTo('DELETING', ['DEFAULT']);
-  // }
 
   failDeleting(): void {
     this.transitionTo('DELETE_FAILED', ['DELETING']);

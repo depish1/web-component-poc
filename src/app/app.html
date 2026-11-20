@@ -1,9 +1,5 @@
 <nav aria-label="Demonstracje">
   <a routerLink="/">Documents</a>
-  <a routerLink="/documents2">Documents2 — Reactive Forms</a>
   <a routerLink="/documents3">Documents3 — Signal Forms</a>
 </nav>
 <router-outlet #demo="outlet" />
-@if (!demo.isActivated) {
-  <app-test-wrapper />
-}

@@ -32,5 +32,3 @@ export interface Repository {
 export type RepositoryType = 'A' | 'B';
 
 export type SynchronizationMode = 'IMMEDIATE' | 'DEFERRED';
-
-export type SelectionMode = 'NONE' | 'SINGLE' | 'MULTI';

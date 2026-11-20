@@ -1,7 +1,7 @@
 import { Component, signal, viewChildren } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { disabled, FormField, form, minLength } from '@angular/forms/signals';
-import { Documents3 } from './documents3.component';
+import { Documents3 } from './documents.component';
 import type { DocumentMetadata, Repository, SynchronizationMode } from './documents.types';
 import { RepositoryFactory } from './RepositoryFactory';
 

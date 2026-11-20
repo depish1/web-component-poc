@@ -13,10 +13,18 @@ export class DocumentsStore {
       .map((document) => ({ ...document.metadata() })),
   );
 
-  replace(documents: DocumentMetadata[]): void {
-    this._documents.set(
-      documents.map((metadata) => new DocumentModel({ initialState: 'DEFAULT', metadata: { ...metadata } })),
-    );
+  readonly allData = computed(() => this.documents().map((document) => ({ ...document.metadata() })));
+
+  getData(): DocumentMetadata[] {
+    return this.data();
+  }
+
+  getAllData(): DocumentMetadata[] {
+    return this.allData();
+  }
+
+  setData(docs: DocumentMetadata[]): void {
+    this._documents.set(docs.map((metadata) => new DocumentModel({ initialState: 'DEFAULT', metadata })));
   }
 
   getDocumentByLocalId(localId: string) {
