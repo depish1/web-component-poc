@@ -1,108 +1,107 @@
-// import { provideHttpClient } from '@angular/common/http';
-// import { createCustomElement } from '@angular/elements';
-// import { createApplication } from '@angular/platform-browser';
-// import {
-//   DocumentsElementAdapter,
-//   DocumentsElementOptions,
-// } from './app/documents-element/documents-element.component';
-// import type { DocumentMetadata } from './app/documents-old/documents.types';
+import { provideHttpClient } from '@angular/common/http';
+import { createCustomElement } from '@angular/elements';
+import { createApplication } from '@angular/platform-browser';
+import { copyDocuments, DocumentsElementAdapter, DocumentsElementState } from './app/documents-element/documents-element-adapter';
+import type { DocumentsElementOptions } from './app/documents-element/documents-element-adapter';
+import type { DocumentMetadata } from './app/documents/documents.types';
 
-// interface GeneratedDocumentsElement extends HTMLElement {
-//   options: DocumentsElementOptions;
-//   connect: (adapter: DocumentsElementAdapter) => void;
-//   connectedCallback(): void;
-//   disconnectedCallback(): void;
-// }
+interface GeneratedElement extends HTMLElement {
+  adapterState: DocumentsElementState;
+  connectedCallback(): void;
+  disconnectedCallback(): void;
+}
 
-// const tagName = 'baw-documents';
-// const registration = Symbol.for('web-component-poc.baw-documents.registration');
+const tagName = 'baw-documents';
+const registration = Symbol.for('web-component-poc.baw-documents.registration');
 
-// async function registerDocumentsElement(): Promise<void> {
-//   if (customElements.get(tagName)) return;
+async function registerDocumentsElement(): Promise<void> {
+  if (customElements.get(tagName)) return;
 
-//   const application = await createApplication({ providers: [provideHttpClient()] });
-//   const AngularElement = createCustomElement(DocumentsElementAdapter, {
-//     injector: application.injector,
-//   }) as unknown as new () => GeneratedDocumentsElement;
+  const application = await createApplication({ providers: [provideHttpClient()] });
+  const AngularElement = createCustomElement(DocumentsElementAdapter, {
+    injector: application.injector,
+  }) as unknown as new () => GeneratedElement;
 
-//   class DocumentsElement extends AngularElement {
-//     private adapter?: DocumentsElementAdapter;
-//     private initialization?: Promise<void>;
-//     private resolveReady?: () => void;
-//     private connected = false;
-//     private validation = { valid: true } as { valid: boolean; message?: string };
+  class DocumentsElement extends AngularElement {
+    private configuration?: DocumentsElementState;
 
-//     override connectedCallback(): void {
-//       this.connected = true;
-//       if (this.initialization) super.connectedCallback();
-//     }
+    override connectedCallback(): void {
+      if (this.configuration) super.connectedCallback();
+    }
 
-//     override disconnectedCallback(): void {
-//       this.connected = false;
-//       if (this.initialization) super.disconnectedCallback();
-//     }
+    override disconnectedCallback(): void {
+      if (this.configuration) super.disconnectedCallback();
+    }
 
-//     init(options: DocumentsElementOptions = {}): Promise<void> {
-//       if (this.initialization) return this.initialization;
+    init(options: DocumentsElementOptions = {}): void {
+      if (this.configuration) throw new Error('The documents element is already initialized.');
 
-//       this.initialization = new Promise<void>((resolve) => {
-//         this.resolveReady = resolve;
-//       });
-//       this.options = options;
-//       this.connect = (adapter) => {
-//         this.adapter = adapter;
-//         adapter.validation.set(this.validation);
-//         this.resolveReady?.();
-//         this.resolveReady = undefined;
-//       };
+      const state = new DocumentsElementState({ ...options });
+      this.configuration = state;
+      this.adapterState = state;
+      if (this.isConnected) super.connectedCallback();
+    }
 
-//       if (this.connected) super.connectedCallback();
-//       return this.initialization;
-//     }
+    setData(documents: DocumentMetadata[]): void {
+      const state = this.requireConfiguration();
+      if (state.committing) throw new Error('Cannot replace documents during commit.');
 
-//     get isValid(): boolean {
-//       return this.validation.valid;
-//     }
+      const replacement = copyDocuments(documents);
+      state.data.set({ documents: replacement });
+      if (this.isConnected) state.adapter?.applyReplacement();
+      state.notifyChange(replacement);
+    }
 
-//     setValid(isValid: boolean, errorMsg?: string): void {
-//       this.validation = { valid: isValid, message: isValid ? undefined : errorMsg };
-//       this.adapter?.validation.set(this.validation);
-//     }
+    getData(): DocumentMetadata[] {
+      return copyDocuments(this.requireConfiguration().data().documents);
+    }
 
-//     setData(documents: DocumentMetadata[]): void {
-//       this.requireAdapter().documents().setData(documents);
-//     }
+    get isValid(): boolean {
+      return this.requireConfiguration().validation().valid;
+    }
 
-//     getData(): DocumentMetadata[] {
-//       return this.requireAdapter().documents().getData();
-//     }
+    setValid(isValid: boolean, errMsg?: string): void {
+      this.requireConfiguration().validation.set({
+        valid: isValid,
+        message: isValid ? undefined : errMsg,
+      });
+    }
 
-//     async commit(): Promise<void> {
-//       await this.requireAdapter().documents().commit();
-//     }
+    get isSynchronized(): boolean {
+      return this.requireConfiguration().adapter?.documents().isSynchronized() ?? true;
+    }
 
-//     isSynchronized(): boolean {
-//       return this.requireAdapter().documents().isSynchronized();
-//     }
+    async commit(): Promise<void> {
+      const state = this.requireConfiguration();
+      if (!this.isConnected || !state.adapter) {
+        throw new Error('Connect the initialized documents element before committing.');
+      }
+      if (state.committing) throw new Error('Commit already in progress.');
 
-//     private requireAdapter(): DocumentsElementAdapter {
-//       if (!this.connected || !this.adapter) {
-//         throw new Error('Connect the documents element and await init() before using its API.');
-//       }
-//       return this.adapter;
-//     }
-//   }
+      state.committing = true;
+      try {
+        await state.adapter.documents().commit();
+      } finally {
+        state.committing = false;
+      }
+    }
 
-//   if (customElements.get(tagName)) {
-//     application.destroy();
-//     return;
-//   }
-//   customElements.define(tagName, DocumentsElement);
-// }
+    private requireConfiguration(): DocumentsElementState {
+      if (!this.configuration) throw new Error('Call init() on the documents element first.');
+      return this.configuration;
+    }
+  }
 
-// if (!Reflect.has(globalThis, registration)) {
-//   Reflect.set(globalThis, registration, registerDocumentsElement().catch((error) => {
-//     Reflect.deleteProperty(globalThis, registration);
-//     throw error;
-//   }));
-// }
+  customElements.define(tagName, DocumentsElement);
+}
+
+if (!Reflect.has(globalThis, registration)) {
+  Reflect.set(
+    globalThis,
+    registration,
+    registerDocumentsElement().catch((error) => {
+      Reflect.deleteProperty(globalThis, registration);
+      throw error;
+    }),
+  );
+}

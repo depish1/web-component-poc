@@ -19,10 +19,10 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should link to the Documents2 demo', async () => {
+  it('should link to the Signal Forms demo', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('a[href="/documents2"]')?.textContent).toContain('Documents2');
+    expect(compiled.querySelector('a[href="/documents3"]')?.textContent).toContain('Signal Forms');
   });
 });

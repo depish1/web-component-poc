@@ -58,47 +58,51 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
 
-## Documents2
+## Documents — Signal Forms
 
 Uruchom [docs-api-test](https://github.com/depish1/docs-api-test) na porcie 3000.
 Adapter repozytorium A używa `http://localhost:3000/api/files`. Oba przykłady
 uruchamiaj z originu `http://localhost:4200` albo dodaj wybrany origin do
 `CORS_ALLOWED_ORIGINS` serwera API.
 
-### Angular Reactive Forms
-
 Uruchom `npm ci`, potem `npm start` i otwórz
-`http://localhost:4200/documents2`. Formularz podpina `Documents2` przez
-`formControlName`. Regułę definiuje kontrolka, a komponent wyświetla przekazany
-stan walidacji. Strona główna nadal pokazuje oryginalny komponent.
+`http://localhost:4200/documents3`. Obie listy są osobnymi polami Signal Forms.
+Pierwsza wymaga co najmniej jednego aktywnego dokumentu.
 
-### Web Component w HTML i JavaScript
+## Web Component dla BAW
 
-Zatrzymaj serwer Angular, uruchom `npm run build:element`, potem
-`python -m http.server 4200 --directory dist/documents-element/browser`.
-Otwórz `http://localhost:4200/`. Źródła strony są w `web-component-demo/`.
-Do osadzenia w hoście użyj modułu `main.js` z tego buildu wraz z plikami JS
-wygenerowanymi obok niego.
+Uruchom `npm run build:element`, potem
+`python -m http.server 4200 --directory dist/documents-element/browser`
+przy wolnym porcie 4200. Źródła demonstracji są w `web-component-demo/`.
+Host ładuje wygenerowany moduł `main.js` i przed użyciem elementu czeka na
+rejestrację znacznika.
 
-Po `customElements.whenDefined('baw-documents')` podłącz element do dokumentu
-i poczekaj na `element.init({ repository: 'A', synchronizationMode: 'DEFERRED' })`.
-Element udostępnia `setData()`, `getData()`, `commit()`, `isSynchronized()`,
-`isValid` i `setValid(isValid, errorMsg?)`. Zdarzenia `documentsChanged`,
-`documentAdded` i `documentRemoved` mają dane w `event.detail`.
+```js
+await customElements.whenDefined('baw-documents');
 
-W obu przykładach spróbuj zapisać pustą listę, dodaj plik i spróbuj ponownie.
-Po zapisie zobaczysz metadane z ID zwróconym przez repozytorium. Możesz też
-oznaczyć jedyny plik do usunięcia i sprawdzić, czy formularz ponownie blokuje zapis.
+const documents = document.createElement('baw-documents');
+documents.init({
+  repository: 'A',
+  synchronizationMode: 'DEFERRED',
+  initialData: [],
+  onChange: (data) => console.log(data),
+});
 
-## Documents3 — Signal Forms
+document.body.append(documents);
+```
 
-Po uruchomieniu testowego API i `npm start` otwórz
-`http://localhost:4200/documents3`. Obie listy w przykładzie są odrębnymi
-polami tego samego formularza Signal Forms. Pierwsza wymaga co najmniej jednego
-aktywnego dokumentu.
+- `init(options?)` wywołuje się raz na instancję, synchronicznie. Domyślna lista
+  jest pusta. Inicjalizacja nie wywołuje callbacku.
+- `getData()` zwraca kopię aktywnych metadanych. `setData(data)` zastępuje listę
+  dokumentami w stanie `DEFAULT` i odrzuca starą kolejkę. Podczas `commit()`
+  wywołanie `setData()` zgłasza wyjątek.
+- `onChange(data)` otrzymuje migawkę po zmianie wartości, także po `setData()`
+  i nadaniu ID przez API. Powiadomienia są dostarczane w mikrozadaniach.
+- `isValid` i `isSynchronized` to niezależne właściwości do odczytu.
+  `setValid(false, message?)` ustawia błąd BAW z opcjonalnym tekstem,
+  a `setValid(true)` go czyści.
+- `commit()` zwraca obietnicę synchronizacji zamontowanej kontrolki.
+  Po zakończeniu odczytaj `isSynchronized` i świeże `getData()`.
 
-Przekaż wartość początkową w modelu formularza i podepnij kontrolkę przez
-`[formField]`. Zewnętrzna podmiana wartości pola tworzy nową listę dokumentów
-i odrzuca dotychczasowe operacje odroczone tej listy. Host powinien blokować
-podmianę podczas zapisu. Po `await commit()` i sprawdzeniu `isSynchronized()`
-odczytaj listę bezpośrednio z modelu formularza, razem z ID nadanymi przez API.
+Po `setData()` wyniki żądań dotyczących starej listy nie aktualizują nowej
+listy. Serwer może nadal wykonać żądanie, które już do niego dotarło.

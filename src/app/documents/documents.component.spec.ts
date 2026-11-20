@@ -1,7 +1,7 @@
 import { Component, signal, viewChildren } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { disabled, FormField, form, minLength } from '@angular/forms/signals';
-import { Documents3 } from './documents.component';
+import { Documents } from './documents.component';
 import type { DocumentMetadata, Repository, SynchronizationMode } from './documents.types';
 import { RepositoryFactory } from './RepositoryFactory';
 
@@ -16,10 +16,10 @@ const existingDocument: DocumentMetadata = {
 };
 
 @Component({
-  imports: [Documents3, FormField],
+  imports: [Documents, FormField],
   template: `
-    <app-documents3 [formField]="fields.first" [synchronizationMode]="mode()" />
-    <app-documents3 [formField]="fields.second" synchronizationMode="DEFERRED" />
+    <app-documents [formField]="fields.first" [synchronizationMode]="mode()" />
+    <app-documents [formField]="fields.second" synchronizationMode="DEFERRED" />
   `,
 })
 class TestHost {
@@ -33,10 +33,10 @@ class TestHost {
     minLength(path.first, 1);
     disabled(path.first, () => this.locked());
   });
-  readonly controls = viewChildren(Documents3);
+  readonly controls = viewChildren(Documents);
 }
 
-describe('Documents3 in Signal Forms', () => {
+describe('Documents in Signal Forms', () => {
   const upload = vi.fn<Repository['upload']>();
   const remove = vi.fn<Repository['remove']>();
 
