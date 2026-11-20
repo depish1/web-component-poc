@@ -71,25 +71,34 @@ Pierwsza wymaga co najmniej jednego aktywnego dokumentu.
 
 ## Web Component dla BAW
 
-Uruchom `npm run build:element`, potem
-`python -m http.server 4200 --directory dist/documents-element/browser`
-przy wolnym porcie 4200. Źródła demonstracji są w `web-component-demo/`.
-Host ładuje wygenerowany moduł `main.js` i przed użyciem elementu czeka na
-rejestrację znacznika.
+Uruchom `npm ci`, a następnie `npm run build:element`. Wynik to
+`dist/documents-element/main.js`. Skopiuj go obok HTML swojej strony jako
+`baw-documents.js` i dodaj na stronie:
 
-```js
-await customElements.whenDefined('baw-documents');
+```html
+<div id="documents-container"></div>
 
-const documents = document.createElement('baw-documents');
-documents.init({
-  repository: 'A',
-  synchronizationMode: 'DEFERRED',
-  initialData: [],
-  onChange: (data) => console.log(data),
-});
+<script type="module">
+  import './baw-documents.js';
 
-document.body.append(documents);
+  await customElements.whenDefined('baw-documents');
+
+  const documents = document.createElement('baw-documents');
+  documents.init({
+    repository: 'A',
+    synchronizationMode: 'DEFERRED',
+    initialData: [],
+    onChange: (data) => console.log(data),
+  });
+
+  document.querySelector('#documents-container').append(documents);
+</script>
 ```
+
+Do lokalnego testu uruchom `python -m http.server 4200` w katalogu swojej
+strony i otwórz `http://localhost:4200`. Operacje na repozytorium A wymagają
+`docs-api-test` na `http://localhost:3000`. Jeśli strona jest pod innym
+originem niż `http://localhost:4200`, uwzględnij go w konfiguracji CORS API.
 
 - `init(options?)` wywołuje się raz na instancję, synchronicznie. Domyślna lista
   jest pusta. Inicjalizacja nie wywołuje callbacku.
