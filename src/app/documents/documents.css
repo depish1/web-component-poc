@@ -32,3 +32,8 @@
 .col-actions {
   width: 200px;
 }
+
+.documents__container[aria-invalid='true'] {
+  outline: 1px solid #b42318;
+  outline-offset: -1px;
+}
