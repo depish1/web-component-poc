@@ -66,14 +66,40 @@ uruchamiaj z originu `http://localhost:4200` albo dodaj wybrany origin do
 `CORS_ALLOWED_ORIGINS` serwera API.
 
 Uruchom `npm ci`, potem `npm start` i otwórz
-`http://localhost:4200/documents3`. Obie listy są osobnymi polami Signal Forms.
-Pierwsza wymaga co najmniej jednego aktywnego dokumentu.
+`http://localhost:4200/` (dotychczasowe `/documents3` też działa).
+Demonstracja pokazuje dwa osobne pola Signal Forms: wymagane dokumenty
+w repozytorium A w trybie `DEFERRED` oraz dodatkowe w repozytorium B
+w trybie `IMMEDIATE`. Pierwsza lista wymaga co najmniej jednego aktywnego
+dokumentu. Pod formularzem widać aktualne dane, stan synchronizacji i błędy.
 
 ## Web Component dla BAW
 
 Uruchom `npm ci`, a następnie `npm run build:element`. Wynik to
-`dist/documents-element/main.js`. Skopiuj go obok HTML swojej strony jako
-`baw-documents.js` i dodaj na stronie:
+`dist/documents-element/main.js`.
+
+### Gotowa strona testowa
+
+W katalogu głównym repozytorium uruchom serwer statyczny:
+
+```bash
+python -m http.server 4200
+```
+
+Otwórz `http://localhost:4200/examples/documents-element/index.html`.
+Przycisk inicjalizacji jawnie wywołuje `initDocumentsElement()` i tworzy dwie
+niezależne instancje `baw-documents` (repozytoria A/B, tryby DEFERRED/IMMEDIATE).
+Strona umożliwia testowanie `setData()`, `getData()`, `setValid()`, `commit()`,
+odczytu `isValid` i `isSynchronized` oraz przeglądanie zdarzeń `onChange`.
+Metadane do `setData()` podaje się jako tablicę JSON w odpowiednim polu.
+
+Serwer statyczny i `npm start` korzystają w przykładach z tego samego portu,
+więc uruchamiaj demonstracje osobno (albo użyj różnych portów i skonfiguruj
+CORS lokalnego API odpowiednio do wybranego originu).
+
+### Osadzanie we własnej stronie
+
+Możesz również skopiować bundle obok własnego pliku HTML jako
+`baw-documents.js` i dodać:
 
 ```html
 <div id="documents-container"></div>
@@ -105,10 +131,9 @@ zostanie wykonana tylko raz. W przypadku błędu następne wywołanie może pono
 próbę. Funkcja `documents.init(options)` nadal inicjalizuje **konkretną instancję**
 Custom Element.
 
-Do lokalnego testu uruchom `python -m http.server 4200` w katalogu swojej
-strony i otwórz `http://localhost:4200`. Operacje na repozytorium A wymagają
-`docs-api-test` na `http://localhost:3000`. Jeśli strona jest pod innym
-originem niż `http://localhost:4200`, uwzględnij go w konfiguracji CORS API.
+Operacje REST wymagają `docs-api-test` na `http://localhost:3000`. Jeśli strona
+jest pod innym originem niż `http://localhost:4200`, uwzględnij go w
+konfiguracji CORS API.
 
 - `init(options?)` wywołuje się raz na instancję. Zwraca `Promise<void>`, który
   rozwiązuje się po utworzeniu adaptera Angular. Domyślna lista jest pusta;
