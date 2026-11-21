@@ -95,13 +95,20 @@ async function registerDocumentsElement(): Promise<void> {
   customElements.define(tagName, DocumentsElement);
 }
 
-if (!Reflect.has(globalThis, registration)) {
-  Reflect.set(
-    globalThis,
-    registration,
-    registerDocumentsElement().catch((error) => {
+export function initDocumentsElement(): Promise<void> {
+  const existing = Reflect.get(globalThis, registration) as Promise<void> | undefined;
+  if (existing) return existing;
+
+  const pending = registerDocumentsElement().catch((error) => {
+    if (Reflect.get(globalThis, registration) === pending) {
       Reflect.deleteProperty(globalThis, registration);
-      throw error;
-    }),
-  );
+    }
+    throw error;
+  });
+
+  Reflect.set(globalThis, registration, pending);
+  return pending;
 }
+
+// Loading the bundle only exposes the entry point; BAW decides when to initialize Angular.
+Object.assign(globalThis, { initDocumentsElement });
