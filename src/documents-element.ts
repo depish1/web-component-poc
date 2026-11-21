@@ -1,12 +1,16 @@
 import { provideHttpClient } from '@angular/common/http';
 import { createCustomElement } from '@angular/elements';
 import { createApplication } from '@angular/platform-browser';
-import { copyDocuments, DocumentsElementAdapter, DocumentsElementState } from './app/documents-element/documents-element-adapter';
+import {
+  bindDocumentsElementHost,
+  copyDocuments,
+  DocumentsElementAdapter,
+  unbindDocumentsElementHost,
+} from './app/documents-element/documents-element-adapter';
 import type { DocumentsElementOptions } from './app/documents-element/documents-element-adapter';
 import type { DocumentMetadata } from './app/documents/documents.types';
 
 interface GeneratedElement extends HTMLElement {
-  adapterState: DocumentsElementState;
   connectedCallback(): void;
   disconnectedCallback(): void;
 }
@@ -23,72 +27,105 @@ async function registerDocumentsElement(): Promise<void> {
   }) as unknown as new () => GeneratedElement;
 
   class DocumentsElement extends AngularElement {
-    private configuration?: DocumentsElementState;
+    #adapter?: DocumentsElementAdapter;
+    #initialized = false;
+    #destroyed = false;
+    #connectionCompleted = false;
+    #resolveReady?: () => void;
+    #rejectReady?: (reason: unknown) => void;
 
     override connectedCallback(): void {
-      if (this.configuration) super.connectedCallback();
+      if (!this.#initialized || this.#destroyed) return;
+
+      try {
+        super.connectedCallback();
+        this.#connectionCompleted = true;
+        if (this.#adapter) this.resolveInitialization();
+      } catch (error) {
+        this.#destroyed = true;
+        this.#adapter = undefined;
+        unbindDocumentsElementHost(this);
+        this.#rejectReady?.(error);
+        this.#resolveReady = undefined;
+        this.#rejectReady = undefined;
+      }
     }
 
     override disconnectedCallback(): void {
-      if (this.configuration) super.disconnectedCallback();
+      if (this.#initialized && !this.#destroyed) super.disconnectedCallback();
     }
 
-    init(options: DocumentsElementOptions = {}): void {
-      if (this.configuration) throw new Error('The documents element is already initialized.');
+    async init(options: DocumentsElementOptions = {}): Promise<void> {
+      if (this.#initialized) throw new Error('The documents element is already initialized.');
 
-      const state = new DocumentsElementState({ ...options });
-      this.configuration = state;
-      this.adapterState = state;
-      if (this.isConnected) super.connectedCallback();
+      const initialData = options.initialData ? copyDocuments(options.initialData) : undefined;
+
+      this.#initialized = true;
+      const ready = new Promise<void>((resolve, reject) => {
+        this.#resolveReady = resolve;
+        this.#rejectReady = reject;
+      });
+
+      bindDocumentsElementHost(this, {
+        options: {
+          ...options,
+          initialData,
+        },
+        onReady: (adapter) => {
+          this.#adapter = adapter;
+          if (this.#connectionCompleted) this.resolveInitialization();
+        },
+        onDestroyed: (adapter) => {
+          if (this.#adapter && this.#adapter !== adapter) return;
+          this.#adapter = undefined;
+          this.#destroyed = true;
+          unbindDocumentsElementHost(this);
+          this.#rejectReady?.(new Error('The documents element was destroyed before initialization.'));
+          this.#resolveReady = undefined;
+          this.#rejectReady = undefined;
+        },
+      });
+
+      if (this.isConnected) this.connectedCallback();
+      return ready;
     }
 
     setData(documents: DocumentMetadata[]): void {
-      const state = this.requireConfiguration();
-      if (state.committing) throw new Error('Cannot replace documents during commit.');
-
-      const replacement = copyDocuments(documents);
-      state.data.set({ documents: replacement });
-      if (this.isConnected) state.adapter?.applyReplacement();
-      state.notifyChange(replacement);
+      this.requireAdapter().setData(documents);
     }
 
     getData(): DocumentMetadata[] {
-      return copyDocuments(this.requireConfiguration().data().documents);
+      return this.requireAdapter().getData();
     }
 
     get isValid(): boolean {
-      return this.requireConfiguration().validation().valid;
+      return this.requireAdapter().isValid;
     }
 
     setValid(isValid: boolean, errMsg?: string): void {
-      this.requireConfiguration().validation.set({
-        valid: isValid,
-        message: isValid ? undefined : errMsg,
-      });
+      this.requireAdapter().setValid(isValid, errMsg);
     }
 
     get isSynchronized(): boolean {
-      return this.requireConfiguration().adapter?.documents().isSynchronized() ?? true;
+      return this.isConnected && !this.#destroyed ? (this.#adapter?.isSynchronized ?? false) : false;
     }
 
     async commit(): Promise<void> {
-      const state = this.requireConfiguration();
-      if (!this.isConnected || !state.adapter) {
-        throw new Error('Connect the initialized documents element before committing.');
-      }
-      if (state.committing) throw new Error('Commit already in progress.');
-
-      state.committing = true;
-      try {
-        await state.adapter.documents().commit();
-      } finally {
-        state.committing = false;
-      }
+      await this.requireAdapter().commit();
     }
 
-    private requireConfiguration(): DocumentsElementState {
-      if (!this.configuration) throw new Error('Call init() on the documents element first.');
-      return this.configuration;
+    private resolveInitialization(): void {
+      this.#resolveReady?.();
+      this.#resolveReady = undefined;
+      this.#rejectReady = undefined;
+    }
+
+    private requireAdapter(): DocumentsElementAdapter {
+      if (!this.#initialized) throw new Error('Call init() on the documents element first.');
+      if (!this.isConnected || this.#destroyed || !this.#adapter) {
+        throw new Error('Connect the initialized documents element and await init() before using its API.');
+      }
+      return this.#adapter;
     }
   }
 
