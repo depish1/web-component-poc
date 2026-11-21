@@ -78,22 +78,31 @@ Uruchom `npm ci`, a następnie `npm run build:element`. Wynik to
 ```html
 <div id="documents-container"></div>
 
-<script type="module">
-  import './baw-documents.js';
+<script type="module" src="./baw-documents.js"></script>
+<script>
+  // Wywołaj w wybranym momencie z kodu Coach View.
+  async function initDocumentsView(container) {
+    await window.initDocumentsElement();
 
-  await customElements.whenDefined('baw-documents');
+    const documents = document.createElement('baw-documents');
+    documents.init({
+      repository: 'A',
+      synchronizationMode: 'DEFERRED',
+      initialData: [],
+      onChange: (data) => console.log(data),
+    });
 
-  const documents = document.createElement('baw-documents');
-  documents.init({
-    repository: 'A',
-    synchronizationMode: 'DEFERRED',
-    initialData: [],
-    onChange: (data) => console.log(data),
-  });
-
-  document.querySelector('#documents-container').append(documents);
+    container.append(documents);
+  }
 </script>
 ```
+
+Samo załadowanie `baw-documents.js` jedynie udostępnia funkcję
+`initDocumentsElement()`. Dopiero jej jawne wywołanie tworzy aplikację Angular
+i rejestruje tag `baw-documents`. Można ją wywoływać wielokrotnie; rejestracja
+zostanie wykonana tylko raz. W przypadku błędu następne wywołanie może ponowić
+próbę. Funkcja `documents.init(options)` nadal inicjalizuje **konkretną instancję**
+Custom Element.
 
 Do lokalnego testu uruchom `python -m http.server 4200` w katalogu swojej
 strony i otwórz `http://localhost:4200`. Operacje na repozytorium A wymagają
