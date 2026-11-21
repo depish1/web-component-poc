@@ -1,4 +1,4 @@
-import { Component, signal, viewChildren } from '@angular/core';
+import { Component, computed, signal, viewChildren } from '@angular/core';
 import { FormField, form, minLength } from '@angular/forms/signals';
 import { Documents } from '../documents/documents.component';
 import type { DocumentMetadata } from '../documents/documents.types';
@@ -8,13 +8,31 @@ import type { DocumentMetadata } from '../documents/documents.types';
   imports: [Documents, FormField],
   template: `
     <h1>Documents — Signal Forms</h1>
+    <p>Dwie niezależne listy dokumentów w jednym formularzu.</p>
 
     <form (submit)="save($event)">
-      <app-documents [formField]="documentsForm.requiredDocuments" title="Dokumenty wymagane" synchronizationMode="DEFERRED" />
-      <app-documents [formField]="documentsForm.additionalDocuments" title="Dokumenty dodatkowe" synchronizationMode="DEFERRED" />
-      <button type="submit" [disabled]="saving()">Zapisz</button>
-      <button type="button" [disabled]="saving()" (click)="replaceDocuments()">Wyczyść listę dodatkową</button>
+      <app-documents
+        [formField]="documentsForm.requiredDocuments"
+        repositoryType="A"
+        synchronizationMode="DEFERRED"
+        title="Dokumenty wymagane — repozytorium A (DEFERRED)"
+      />
+      <app-documents
+        [formField]="documentsForm.additionalDocuments"
+        repositoryType="B"
+        synchronizationMode="IMMEDIATE"
+        title="Dokumenty dodatkowe — repozytorium B (IMMEDIATE)"
+      />
+      <button type="submit" [disabled]="saving()">Zapisz i zsynchronizuj</button>
+      <button type="button" [disabled]="saving()" (click)="replaceDocuments()">Wyczyść listę dodatkową (setData)</button>
     </form>
+
+    <p>Walidacja formularza: {{ documentsForm().invalid() ? 'niepoprawny' : 'poprawny' }}</p>
+    <p>Repozytorium A zsynchronizowane: {{ synchronization()[0] ? 'tak' : 'nie' }}</p>
+    <p>Repozytorium B zsynchronizowane: {{ synchronization()[1] ? 'tak' : 'nie' }}</p>
+
+    <h2>Aktualne dane formularza</h2>
+    <pre>{{ dataPreview() }}</pre>
 
     @if (error()) {
       <p role="alert">{{ error() }}</p>
@@ -37,6 +55,9 @@ export class DocumentsDemo {
   protected readonly documentsForm = form(this.data, (path) => {
     minLength(path.requiredDocuments, 1, { message: 'Dodaj co najmniej jeden plik.' });
   });
+
+  protected readonly dataPreview = computed(() => JSON.stringify(this.data(), null, 2));
+  protected readonly synchronization = computed(() => this.controls().map((control) => control.isSynchronized()));
 
   protected replaceDocuments(): void {
     if (this.saving()) return;
