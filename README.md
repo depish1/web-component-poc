@@ -85,7 +85,7 @@ Uruchom `npm ci`, a następnie `npm run build:element`. Wynik to
     await window.initDocumentsElement();
 
     const documents = document.createElement('baw-documents');
-    documents.init({
+    const ready = documents.init({
       repository: 'A',
       synchronizationMode: 'DEFERRED',
       initialData: [],
@@ -93,6 +93,7 @@ Uruchom `npm ci`, a następnie `npm run build:element`. Wynik to
     });
 
     container.append(documents);
+    await ready;
   }
 </script>
 ```
@@ -109,8 +110,15 @@ strony i otwórz `http://localhost:4200`. Operacje na repozytorium A wymagają
 `docs-api-test` na `http://localhost:3000`. Jeśli strona jest pod innym
 originem niż `http://localhost:4200`, uwzględnij go w konfiguracji CORS API.
 
-- `init(options?)` wywołuje się raz na instancję, synchronicznie. Domyślna lista
-  jest pusta. Inicjalizacja nie wywołuje callbacku.
+- `init(options?)` wywołuje się raz na instancję. Zwraca `Promise<void>`, który
+  rozwiązuje się po utworzeniu adaptera Angular. Domyślna lista jest pusta;
+  inicjalizacja nie wywołuje `onChange`. Gdy element nie jest jeszcze podłączony
+  do DOM, najpierw zapisz `Promise`, następnie dodaj element do kontenera i
+  dopiero wtedy użyj `await ready` (jak w przykładzie powyżej).
+- Metody `setData()`, `getData()`, `setValid()` i `commit()` wymagają gotowego
+  adaptera. Bez adaptera `isSynchronized` zwraca `false`, a `commit()` zgłasza
+  błąd. Usunięcie elementu z DOM kończy jego użytkowanie; w celu ponownego
+  wyświetlenia formularza utwórz nową instancję.
 - `getData()` zwraca kopię aktywnych metadanych. `setData(data)` zastępuje listę
   dokumentami w stanie `DEFAULT` i odrzuca starą kolejkę. Podczas `commit()`
   wywołanie `setData()` zgłasza wyjątek.
